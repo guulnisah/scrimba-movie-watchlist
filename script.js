@@ -4,13 +4,17 @@ const movieList = document.querySelector('.movie-list')
 const movieListDefault = document.querySelector('#movie-list-default')
 const movieListError = document.querySelector('#movie-list-error')
 
+const searchBarForm = document.querySelector('.search-bar')
 const searchBarInput = document.getElementById('search-bar-input')
 let MOVIES = JSON.parse(localStorage.getItem('movies')) || [];
 
 const watchListDefault = document.querySelector('#watch-list-default')
 const watchList = document.querySelector('.watch-list')
 
-let allMovielist = []
+const watchlistLength = document.querySelector('.watchlist-length')
+
+if (watchlistLength) { watchlistLength.textContent = localStorage.getItem('watchlist') }
+let moviesFound = []
 
 class Movie {
     constructor(id, poster, title, rating, runtime, genre, plot) {
@@ -25,11 +29,9 @@ class Movie {
 }
 
 if (searchBtn) {
-    searchBtn.addEventListener('click', findMovies)
-    searchBarInput.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') {
-            findMovies()
-        }
+    searchBarForm.addEventListener('submit', (e) => {
+        e.preventDefault()
+        findMovies()
     })
 }
 
@@ -37,7 +39,7 @@ function findMovies() {
     const searchValue = searchBarInput.value
     movieListDefault.style.display = 'none'
     movieListError.style.display = 'none'
-    allMovielist = []
+    moviesFound = []
     fetch(`https://www.omdbapi.com/?s=${searchValue.trim()}&apikey=f6c71cbb`)
         .then(res => res.json())
         .then(data => {
@@ -47,9 +49,9 @@ function findMovies() {
                     .then(res => res.json())
                     .then(data => {
                         let movie = new Movie(data.imdbID, data.Poster, data.Title, data.Ratings[0].Value, data.Runtime, data.Genre, data.Plot)
-                        allMovielist.push(movie)
+                        moviesFound.push(movie)
                         movieList.innerHTML = ''
-                        displayMovies(allMovielist)
+                        displayMovies(moviesFound)
                     })
             })
         })
@@ -60,7 +62,7 @@ function displayMovies(arr) {
     arr.forEach(elem => {
         let { id, poster, title, rating, runtime, genre, plot } = elem
 
-        const movieCard = document.createElement('div')
+        const movieCard = document.createElement('article')
 
         const movieCardInner = document.createElement('div')
         movieCard.append(movieCardInner)
@@ -76,8 +78,7 @@ function displayMovies(arr) {
         movieHeader.classList.add('movie-header')
         movieHeader.innerHTML = `
         <h3 class="movie-title"><a href="https://www.imdb.com/title/${id}/">${title}</a></h3>
-        <i class="fa-solid fa-star" style="color:#fab005"></i>
-        <span class="movie-rating">${rating.substr(0, rating.indexOf('/'))}</span>
+        <span class="movie-rating"><i class="fa-solid fa-star" style="color:#fab005"></i>${rating.substr(0, rating.indexOf('/'))}</span>
         `
         movieCardInner.append(movieHeader)
 
@@ -96,14 +97,16 @@ function displayMovies(arr) {
         watchlistBtn.addEventListener('click', () => {
             inLocalStorage = !inLocalStorage
             watchlistBtn.innerHTML = !inLocalStorage ? '<i class="fa-solid fa-circle-plus"></i><span>Watchlist</span>' : '<i class="fa-solid fa-circle-minus"></i><span>Remove</span>'
-
             if (inLocalStorage) {
                 MOVIES.push(id)
                 localStorage.setItem('movies', JSON.stringify(MOVIES));
+                localStorage.setItem('watchlist', JSON.parse(localStorage.getItem('movies')).length)
             } else {
                 MOVIES = MOVIES.filter(watchlistBtn => watchlistBtn != id);
                 localStorage.setItem('movies', JSON.stringify(MOVIES));
+                localStorage.setItem('watchlist', JSON.parse(localStorage.getItem('movies')).length)
             }
+            if (watchlistLength) { watchlistLength.textContent = localStorage.getItem('watchlist') }
         })
 
         movieInfo.append(watchlistBtn)
@@ -129,9 +132,9 @@ function nothingFound() {
     movieListError.style.display = 'block'
 }
 
-let allWatchlist = []
 
 if (watchList && MOVIES.length) {
+    let moviesAdded = []
     watchListDefault.style.display = 'none'
     watchList.innerHTML = ''
     MOVIES.forEach((id) => {
@@ -139,9 +142,9 @@ if (watchList && MOVIES.length) {
             .then(res => res.json())
             .then(data => {
                 let movie = new Movie(data.imdbID, data.Poster, data.Title, data.Ratings[0].Value, data.Runtime, data.Genre, data.Plot)
-                allWatchlist.push(movie)
+                moviesAdded.push(movie)
                 watchList.innerHTML = ''
-                displayMovies(allWatchlist)
+                displayMovies(moviesAdded)
                 watchList.querySelectorAll("button").forEach(button =>
                     button.addEventListener("click", () => button.parentElement.parentElement.remove())
                 )
